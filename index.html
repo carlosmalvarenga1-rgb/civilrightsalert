@@ -355,17 +355,8 @@ const getCityCalendarUrl = (cityLabel) => {
 // Back-compat: some parts of the app expect a "portal base".
 const getPortalBaseForCity = (cityName) => getCityPortalUrl(cityName);
 
-            // direct hits
-            if (known[c]) return known[c];
 
-            // common partial matches / aliases
-            if (c.includes('phoenix')) return known['phoenix'];
-            if (c.includes('mesa')) return known['mesa'];
-            if (c.includes('apache junction') || c.includes('apachejunction') || c === 'apache') return known['apache junction'];
 
-            // For other cities: return '' (disable calendar link until you confirm a portal)
-            return '';
-        };
 
         // ============================================
         // MODULE 1: SUBSCRIPTION SYSTEM
