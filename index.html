@@ -1578,6 +1578,8 @@ setMemberVotes(data.votes || []);
             
 
 const [bills, setBills] = useState([]);
+            const [billsOffset, setBillsOffset] = useState(0);
+const [hasMoreBills, setHasMoreBills] = useState(true);
             const [loading, setLoading] = useState(true);
             const [filterImpact, setFilterImpact] = useState('all');
             const [filterTopic, setFilterTopic] = useState('all');
