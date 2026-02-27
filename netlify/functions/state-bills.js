@@ -127,6 +127,7 @@ export async function handler(event) {
         statusDisplay: statusText || "In progress",
         statusPriority,
         url,                              // keep this as the "Read" link
+        legiscan_url: url,                // explicit field for frontend fallback chain
         state: stateAbbr
       };
     });
