@@ -340,7 +340,7 @@
     function BillTitle({ bill }) {
       const title = bill?.title || '';
       const number = bill?.number || '';
-      const url = bill?.url || '#';
+      const url = bill?.public_url || bill?.congress_url || bill?.legiscan_url || bill?.url || '#';
       return (
         <h3 style={{ fontWeight: 700, fontSize: '1.15rem', marginBottom: '0.5rem', color: '#0f172a' }}>
           <a
@@ -393,7 +393,7 @@
             <button onClick={() => onViewDetails(bill)} className="btn btn-primary" style={{ flex: 1 }}>
               📋 View Details
             </button>
-            <button onClick={() => window.open(bill.url, '_blank', 'noopener,noreferrer')} className="btn btn-secondary" style={{ flex: '0 0 auto' }}>
+            <button onClick={() => window.open(bill.public_url || bill.congress_url || bill.legiscan_url || bill.url, '_blank', 'noopener,noreferrer')} className="btn btn-secondary" style={{ flex: '0 0 auto' }}>
               📄 Read
             </button>
           </div>
@@ -628,7 +628,7 @@
             </div>
 
             <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <button className="btn btn-primary" onClick={() => window.open(bill.url, '_blank', 'noopener,noreferrer')}>
+              <button className="btn btn-primary" onClick={() => window.open(bill.public_url || bill.congress_url || bill.legiscan_url || bill.url, '_blank', 'noopener,noreferrer')}>
                 📄 Open Source
               </button>
               <button className="btn btn-secondary" onClick={onClose}>
