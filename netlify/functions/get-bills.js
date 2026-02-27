@@ -19,7 +19,8 @@ export async function handler(event) {
   try {
     const url = new URL("https://api.congress.gov/v3/bill");
     url.searchParams.set("format", "json");
-    url.searchParams.set("congress", "118");
+    // 119th Congress: Jan 2025 – Jan 2027
+    url.searchParams.set("congress", "119");
     url.searchParams.set("limit", event.queryStringParameters?.limit || "50");
     url.searchParams.set("offset", event.queryStringParameters?.offset || "0");
 
