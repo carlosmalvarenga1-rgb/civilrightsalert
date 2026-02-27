@@ -28,9 +28,8 @@ function ordinalSuffix(n) {
   return num + "th";
 }
 
-// Build a public Congress.gov URL from bill fields or API URL
+// Build a public Congress.gov URL from bill fields
 function buildPublicUrl(bill) {
-  // First try using the bill's own fields (most reliable)
   const congress = bill.congress || "";
   const type = (bill.type || "").toLowerCase();
   const number = bill.number || "";
@@ -38,7 +37,6 @@ function buildPublicUrl(bill) {
   if (congress && type && number) {
     const slug = TYPE_MAP[type];
     if (slug) {
-      // bill.number is often "H.R.1234" — extract just the digits
       const num = String(number).replace(/[^0-9]/g, "");
       if (num) {
         return `https://www.congress.gov/bill/${ordinalSuffix(congress)}-congress/${slug}/${num}`;
@@ -63,16 +61,36 @@ function buildPublicUrl(bill) {
   return "https://www.congress.gov/";
 }
 
-// Simple urgency ranking for UI sorting
-function statusPriority(bill) {
-  const action = (bill.latestAction?.text || "").toLowerCase();
-  if (action.includes("became public law") || action.includes("signed by president")) return 10;
-  if (action.includes("passed") || action.includes("agreed to")) return 8;
-  if (action.includes("cloture") || action.includes("floor")) return 7;
-  if (action.includes("reported") || action.includes("ordered to be reported")) return 6;
-  if (action.includes("committee") || action.includes("referred")) return 5;
-  if (action.includes("introduced")) return 3;
-  return 4;
+// Determine bill STAGE (what citizens care about) from the latest action text
+function deriveBillStage(actionText) {
+  const t = (actionText || "").toLowerCase();
+
+  if (t.includes("became public law") || t.includes("signed by president") || t.includes("enacted")) {
+    return { display: "Signed Into Law", priority: 10 };
+  }
+  if (t.includes("vetoed")) {
+    return { display: "Vetoed", priority: 9 };
+  }
+  if (t.includes("passed house") || t.includes("passed senate") || t.includes("agreed to in")) {
+    return { display: "Passed Chamber", priority: 8 };
+  }
+  if (t.includes("cloture") || t.includes("floor consideration") || t.includes("placed on calendar")) {
+    return { display: "Floor Vote Pending", priority: 7 };
+  }
+  if (t.includes("reported by") || t.includes("ordered to be reported")) {
+    return { display: "Reported by Committee", priority: 6 };
+  }
+  if (t.includes("hearing") || t.includes("markup")) {
+    return { display: "Committee Hearing", priority: 5 };
+  }
+  if (t.includes("referred to") || t.includes("subcommittee")) {
+    return { display: "In Committee", priority: 4 };
+  }
+  if (t.includes("introduced") || t.includes("read twice") || t.includes("sponsor introductory")) {
+    return { display: "Introduced", priority: 3 };
+  }
+
+  return { display: "In Progress", priority: 3 };
 }
 
 export async function handler(event) {
@@ -89,9 +107,11 @@ export async function handler(event) {
     const limit = qs.limit || "50";
     const offset = qs.offset || "0";
 
-    const url = new URL("https://api.congress.gov/v3/bill");
+    // IMPORTANT: congress is a PATH parameter, not a query parameter
+    // Correct:   /v3/bill/119
+    // Wrong:     /v3/bill?congress=119
+    const url = new URL("https://api.congress.gov/v3/bill/119");
     url.searchParams.set("format", "json");
-    url.searchParams.set("congress", "119");
     url.searchParams.set("sort", "updateDate+desc");
     url.searchParams.set("limit", limit);
     url.searchParams.set("offset", offset);
@@ -106,16 +126,26 @@ export async function handler(event) {
       const publicUrl = buildPublicUrl(b);
       const actionText = b.latestAction?.text || "";
       const actionDate = b.latestAction?.actionDate || b.updateDate || "";
+      const stage = deriveBillStage(actionText);
+
+      // Build readable bill number like "H.R. 1234"
+      const TYPE_DISPLAY = {
+        HR: "H.R.", S: "S.", HJRES: "H.J.Res.", SJRES: "S.J.Res.",
+        HCONRES: "H.Con.Res.", SCONRES: "S.Con.Res.", HRES: "H.Res.", SRES: "S.Res."
+      };
+      const typeUpper = (b.type || "").toUpperCase();
+      const typeLabel = TYPE_DISPLAY[typeUpper] || typeUpper;
+      const displayNumber = b.number ? `${typeLabel} ${b.number}` : "";
 
       return {
-        id: `${b.congress}-${b.type}-${b.number}`.toLowerCase().replace(/[^a-z0-9-]/g, ""),
-        number: b.number || "",
+        id: `${b.congress}-${(b.type||"").toLowerCase()}-${b.number}`,
+        number: displayNumber,
         title: b.title || "",
         howItAffectsYou: b.title || "",
         date: actionDate,
         status: actionText,
-        statusDisplay: actionText || "In progress",
-        statusPriority: statusPriority(b),
+        statusDisplay: stage.display,
+        statusPriority: stage.priority,
         url: publicUrl,
         public_url: publicUrl,
         congress_url: publicUrl,
