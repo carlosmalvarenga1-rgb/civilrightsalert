@@ -355,16 +355,32 @@ exports.handler = async (event) => {
                 console.log('Bodies fetch failed for', client);
             }
             
-            // Find council-type body IDs (City Council, Town Council, Mayor & Council, etc.)
-            const councilKeywords = ['council', 'mayor', 'board of supervisors', 'commission', 'aldermen'];
-            const councilBodyIds = bodies
-                .filter(b => {
-                    const name = (b.BodyName || '').toLowerCase();
-                    return councilKeywords.some(kw => name.includes(kw)) && b.BodyActiveFlag === 1;
-                })
-                .map(b => b.BodyId);
+            // Find council-type body IDs — prioritize the main governing body
+            // First look for the primary council body specifically
+            const primaryKeywords = ['city council', 'town council', 'mayor and council', 'mayor & council', 'board of supervisors', 'common council'];
+            const primaryBodies = bodies.filter(b => {
+                const name = (b.BodyName || '').toLowerCase();
+                return primaryKeywords.some(kw => name.includes(kw)) && b.BodyActiveFlag === 1;
+            });
             
-            console.log(`Found ${councilBodyIds.length} council bodies for ${client}:`, councilBodyIds);
+            // If we found primary council bodies, use those. Otherwise fall back to broader search.
+            let councilBodies;
+            if (primaryBodies.length > 0) {
+                councilBodies = primaryBodies;
+            } else {
+                // Broader fallback — but exclude advisory boards, commissions, committees
+                const broadKeywords = ['council', 'mayor', 'aldermen'];
+                const excludeKeywords = ['advisory', 'committee', 'commission', 'subcommittee', 'task force', 'authority', 'board of adjustment', 'planning', 'zoning'];
+                councilBodies = bodies.filter(b => {
+                    const name = (b.BodyName || '').toLowerCase();
+                    const matchesBroad = broadKeywords.some(kw => name.includes(kw));
+                    const isExcluded = excludeKeywords.some(kw => name.includes(kw));
+                    return matchesBroad && !isExcluded && b.BodyActiveFlag === 1;
+                });
+            }
+            
+            const councilBodyIds = councilBodies.map(b => b.BodyId);
+            console.log(`Found ${councilBodyIds.length} council bodies for ${client}:`, councilBodies.map(b => b.BodyName));
             
             // Step 2: Get office records — these link persons to their elected/appointed positions
             let officeRecords = [];
