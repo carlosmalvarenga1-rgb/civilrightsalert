@@ -340,7 +340,8 @@
     function BillTitle({ bill }) {
       const title = bill?.title || '';
       const number = bill?.number || '';
-      const url = bill?.public_url || bill?.congress_url || bill?.legiscan_url || bill?.url || '#';
+      const baseUrl = bill?.public_url || bill?.congress_url || bill?.legiscan_url || bill?.url || '#';
+      const url = baseUrl.includes('congress.gov/bill/') ? baseUrl.replace(/\/?$/, '/text') : baseUrl;
       return (
         <h3 style={{ fontWeight: 700, fontSize: '1.15rem', marginBottom: '0.5rem', color: '#0f172a' }}>
           <a
@@ -356,6 +357,14 @@
         </h3>
       );
     }
+
+    // Helper: get the direct text URL for a bill
+    const getBillTextUrl = (bill) => {
+      const url = bill.public_url || bill.congress_url || bill.legiscan_url || bill.url || '';
+      // For Congress.gov URLs, link directly to the /text page
+      if (url.includes('congress.gov/bill/')) return url.replace(/\/?$/, '/text');
+      return url;
+    };
 
     function BillCard({ bill, onViewDetails, watchlist, toggleWatchlist }) {
       return (
@@ -393,7 +402,7 @@
             <button onClick={() => onViewDetails(bill)} className="btn btn-primary" style={{ flex: 1 }}>
               📋 View Details
             </button>
-            <button onClick={() => window.open(bill.public_url || bill.congress_url || bill.legiscan_url || bill.url, '_blank', 'noopener,noreferrer')} className="btn btn-secondary" style={{ flex: '0 0 auto' }}>
+            <button onClick={() => window.open(getBillTextUrl(bill), '_blank', 'noopener,noreferrer')} className="btn btn-secondary" style={{ flex: '0 0 auto' }}>
               📄 Read
             </button>
           </div>
@@ -635,7 +644,8 @@
 
       if (!bill) return null;
 
-      const readUrl = bill.public_url || bill.congress_url || bill.legiscan_url || bill.url;
+      const baseUrl = bill.public_url || bill.congress_url || bill.legiscan_url || bill.url;
+      const readUrl = baseUrl && baseUrl.includes('congress.gov/bill/') ? baseUrl.replace(/\/?$/, '/text') : baseUrl;
       const actionsToShow = detail?.actions ? (showAllActions ? detail.actions : detail.actions.slice(0, 5)) : [];
 
       return (
@@ -669,17 +679,31 @@
               </div>
             )}
 
-            {/* Summary */}
-            {detail?.summary && (
+            {/* Plain English Summary */}
+            {detail?.plainEnglishSummary && (
               <div className="card" style={{ background: '#f0fdf4', border: '2px solid #86efac', marginBottom: '1rem' }}>
-                <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#166534', fontSize: '0.9375rem' }}>📝 What This Bill Does</div>
-                <div style={{ color: '#334155', fontSize: '0.9375rem', lineHeight: 1.7 }}
-                     dangerouslySetInnerHTML={{ __html: detail.summary }} />
+                <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#166534', fontSize: '0.9375rem' }}>📝 What This Bill Does (Plain English)</div>
+                <div style={{ color: '#334155', fontSize: '0.9375rem', lineHeight: 1.7, whiteSpace: 'pre-line' }}>
+                  {detail.plainEnglishSummary}
+                </div>
               </div>
             )}
 
+            {/* Official CRS Summary (if available and different from plain English) */}
+            {detail?.summary && (
+              <details style={{ marginBottom: '1rem' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#64748b', fontSize: '0.8125rem', padding: '0.5rem 0' }}>
+                  📄 View Official CRS Summary
+                </summary>
+                <div className="card" style={{ background: '#f8fafc', border: '2px solid #e2e8f0', marginTop: '0.5rem' }}>
+                  <div style={{ color: '#334155', fontSize: '0.875rem', lineHeight: 1.7 }}
+                       dangerouslySetInnerHTML={{ __html: detail.summary }} />
+                </div>
+              </details>
+            )}
+
             {/* If no summary from API, show title as fallback */}
-            {!detail?.summary && !detailLoading && (
+            {!detail?.plainEnglishSummary && !detail?.summary && !detailLoading && (
               <div className="card" style={{ background: '#f8fafc', border: '2px solid #e2e8f0', marginBottom: '1rem' }}>
                 <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#1e293b' }}>About this bill</div>
                 <div style={{ color: '#334155' }}>{stripHtml(bill.howItAffectsYou || bill.title || '')}</div>
