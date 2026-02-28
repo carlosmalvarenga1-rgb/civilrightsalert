@@ -10,7 +10,7 @@
 // data in Legistar before being added here.
 // =====================================================
 
-const fetch = require('node-fetch');
+// Node 18+ has built-in fetch — no require needed
 
 const LEGISTAR_BASE = 'https://webapi.legistar.com/v1';
 
